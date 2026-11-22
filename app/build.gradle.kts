@@ -45,6 +45,18 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Generate ABI-specific APKs so users do not need to download native
+    // libraries for every CPU architecture. Keep a universal APK available
+    // for convenience/debugging.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            isUniversalApk = true
+        }
+    }
 }
 
 dependencies {
@@ -92,4 +104,10 @@ dependencies {
 
 baselineProfile {
     mergeIntoMain = true
+}
+
+tasks.configureEach {
+    if (name.contains("ComposeMapping", ignoreCase = true)) {
+        enabled = false
+    }
 }
