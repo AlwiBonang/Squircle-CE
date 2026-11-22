@@ -21,8 +21,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 internal data class ExternalTheme(
+    @SerialName("name")
+    val name: String? = null,
+    val author: String? = null,
     @SerialName("type")
-    val type: String? = null,
+    val type: String? = "dark",
     @SerialName("colors")
     val colors: ExternalColors? = null,
 )
@@ -30,27 +33,27 @@ internal data class ExternalTheme(
 @Serializable
 internal data class ExternalColors(
     @SerialName("global.colorPrimary")
-    val colorPrimary: String? = null,
+    val colorPrimary: String = "#FF8000",
     @SerialName("global.colorOutline")
-    val colorOutline: String? = null,
+    val colorOutline: String = "#393B40",
     @SerialName("global.colorBackgroundPrimary")
-    val colorBackgroundPrimary: String? = null,
+    val colorBackgroundPrimary: String = "#1E1F22",
     @SerialName("global.colorBackgroundSecondary")
-    val colorBackgroundSecondary: String? = null,
+    val colorBackgroundSecondary: String = "#2B2D30",
     @SerialName("global.colorBackgroundTertiary")
-    val colorBackgroundTertiary: String? = null,
+    val colorBackgroundTertiary: String = "#3E3F43",
     @SerialName("global.colorTextAndIconPrimary")
-    val colorTextAndIconPrimary: String? = null,
+    val colorTextAndIconPrimary: String = "#FFFFFF",
     @SerialName("global.colorTextAndIconPrimaryInverse")
-    val colorTextAndIconPrimaryInverse: String? = null,
+    val colorTextAndIconPrimaryInverse: String = "#000000",
     @SerialName("global.colorTextAndIconSecondary")
-    val colorTextAndIconSecondary: String? = null,
+    val colorTextAndIconSecondary: String = "#BCBCBC",
     @SerialName("global.colorTextAndIconDisabled")
-    val colorTextAndIconDisabled: String? = null,
+    val colorTextAndIconDisabled: String = "#6E6E6E",
     @SerialName("global.colorTextAndIconAdditional")
-    val colorTextAndIconAdditional: String? = null,
+    val colorTextAndIconAdditional: String = "#FFBB33",
     @SerialName("global.colorTextAndIconSuccess")
-    val colorTextAndIconSuccess: String? = null,
+    val colorTextAndIconSuccess: String = "#71D98C",
     @SerialName("global.colorTextAndIconError")
-    val colorTextAndIconError: String? = null,
+    val colorTextAndIconError: String = "#E45356",
 )

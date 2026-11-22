@@ -22,6 +22,8 @@ internal interface ThemeRepository {
 
     suspend fun loadThemes(query: String): List<ThemeModel>
 
+    suspend fun importTheme(json: String, fileName: String): ThemeModel
+
     suspend fun removeTheme(themeModel: ThemeModel)
     suspend fun selectTheme(themeModel: ThemeModel)
 }

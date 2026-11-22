@@ -63,11 +63,6 @@ internal fun OtherMenu(
             submenu = true,
         )
         PopupMenuItem(
-            title = stringResource(R.string.editor_menu_terminal),
-            iconResId = UiR.drawable.ic_console,
-            onClick = onTerminalClicked,
-        )
-        PopupMenuItem(
             title = stringResource(R.string.editor_menu_settings),
             iconResId = UiR.drawable.ic_settings,
             onClick = onSettingsClicked,

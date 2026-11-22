@@ -61,6 +61,7 @@ fun PopupMenu(
 }
 
 @Composable
+@NonRestartableComposable
 fun PopupMenuItem(
     title: String,
     onClick: () -> Unit,

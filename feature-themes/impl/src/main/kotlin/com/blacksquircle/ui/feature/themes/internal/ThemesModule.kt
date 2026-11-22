@@ -17,6 +17,8 @@
 package com.blacksquircle.ui.feature.themes.internal
 
 import com.blacksquircle.ui.core.provider.coroutine.DispatcherProvider
+import android.content.Context
+import kotlinx.serialization.json.Json
 import com.blacksquircle.ui.core.settings.SettingsManager
 import com.blacksquircle.ui.feature.themes.api.interactor.ThemeInteractor
 import com.blacksquircle.ui.feature.themes.data.repository.ThemeRepositoryImpl
@@ -33,11 +35,15 @@ internal object ThemesModule {
         dispatcherProvider: DispatcherProvider,
         themeInteractor: ThemeInteractor,
         settingsManager: SettingsManager,
+        context: Context,
+        jsonParser: Json,
     ): ThemeRepository {
         return ThemeRepositoryImpl(
             dispatcherProvider = dispatcherProvider,
             themeInteractor = themeInteractor,
             settingsManager = settingsManager,
+            context = context,
+            jsonParser = jsonParser,
         )
     }
 }

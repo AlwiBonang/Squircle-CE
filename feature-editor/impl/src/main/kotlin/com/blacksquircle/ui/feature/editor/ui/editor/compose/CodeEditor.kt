@@ -21,6 +21,7 @@ import android.view.ViewGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -44,6 +45,13 @@ import io.github.rosemoe.sora.util.regex.RegexBackrefGrammar
 import io.github.rosemoe.sora.widget.EditorSearcher.SearchOptions
 import io.github.rosemoe.sora.widget.subscribeAlways
 
+private class EditorUpdateCache {
+    var content: Content? = null
+    var settings: EditorSettings? = null
+    var languageKey: String? = null
+    var language: io.github.rosemoe.sora.lang.Language? = null
+}
+
 @Composable
 internal fun CodeEditor(
     content: Content,
@@ -55,6 +63,7 @@ internal fun CodeEditor(
     onShortcutPressed: (Boolean, Boolean, Boolean, Int) -> Unit = { _, _, _, _ -> },
 ) {
     val context = LocalContext.current
+    val updateCache = remember { EditorUpdateCache() }
     val view = remember {
         CodeEditor(context).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -71,6 +80,23 @@ internal fun CodeEditor(
                     val ctrl = event.isCtrlPressed
                     val shift = (event.metaState and KeyEvent.META_SHIFT_ON) != 0
                     val alt = (event.metaState and KeyEvent.META_ALT_ON) != 0
+
+                    // Backspace at the beginning of an indented line removes the
+                    // complete leading indentation instead of stopping at an indent boundary.
+                    if (event.keyCode == KeyEvent.KEYCODE_DEL && !ctrl && !alt && !shift) {
+                        val cursor = text.cursor
+                        val line = cursor.leftLine
+                        val column = cursor.leftColumn
+                        if (column > 0) {
+                            val currentLine = text.getLine(line).toString()
+                            val leadingWhitespace = currentLine.takeWhile { it == ' ' || it == '\t' }.length
+                            if (column <= leadingWhitespace) {
+                                text.delete(line, 0, line, column)
+                                event.intercept()
+                            }
+                        }
+                    }
+
                     if (ctrl || alt) {
                         event.intercept()
                         onShortcutPressed(ctrl, shift, alt, event.keyCode)
@@ -83,33 +109,64 @@ internal fun CodeEditor(
     AndroidView(
         factory = { view },
         update = { editor ->
-            editor.setTextSize(settings.fontSize)
-            editor.isWordwrap = settings.wordWrap
-            editor.props.stickyScroll = settings.stickyScroll
-            editor.isScalable = settings.pinchZoom
-            editor.isLineNumberEnabled = settings.lineNumbers
-            editor.isHighlightCurrentLine = settings.highlightCurrentLine
-            editor.isHighlightBracketPair = settings.highlightMatchingDelimiters
-            editor.isBlockLineEnabled = settings.highlightCodeBlocks
-            editor.isEditable = !settings.readOnly
-            editor.tabWidth = settings.tabWidth
-            editor.typefaceText = settings.fontType
-            editor.typefaceLineNumber = settings.fontType
-            editor.isDisableSoftKbdIfHardKbdAvailable = !settings.softKeyboard
-            editor.setShowInvisibleChars(settings.showInvisibleChars)
+            // Android IME animation can trigger frequent recompositions. Only apply
+            // editor settings when they actually change, instead of doing expensive
+            // editor configuration on every animation frame.
+            if (updateCache.settings != settings) {
+                editor.setTextSize(settings.fontSize)
+                editor.isWordwrap = settings.wordWrap
+                editor.props.stickyScroll = settings.stickyScroll
+                editor.isScalable = settings.pinchZoom
+                editor.isLineNumberEnabled = settings.lineNumbers
+                editor.isHighlightCurrentLine = settings.highlightCurrentLine
+                editor.isHighlightBracketPair = settings.highlightMatchingDelimiters
+                editor.isBlockLineEnabled = settings.highlightCodeBlocks
+                editor.isEditable = !settings.readOnly
+                editor.tabWidth = settings.tabWidth
+                editor.typefaceText = settings.fontType
+                editor.typefaceLineNumber = settings.fontType
+                editor.isDisableSoftKbdIfHardKbdAvailable = !settings.softKeyboard
+                editor.setShowInvisibleChars(settings.showInvisibleChars
+                )
+                updateCache.settings = settings
+            }
 
-            val editorLanguage = editor.createFromRegistry(
-                language = language,
-                codeCompletion = settings.codeCompletion,
-                autoIndentation = settings.autoIndentation,
-                autoClosePairs = settings.autoClosePairs,
-                useTab = !settings.useSpacesInsteadOfTabs,
-                tabSize = settings.tabWidth,
-            )
-            editor.setEditorLanguage(editorLanguage)
-            editor.setText(content)
-            editor.scroller.startScroll(0, 0, content.scrollX, content.scrollY, 0)
-            editor.scroller.abortAnimation()
+            val languageKey = listOf(
+                language,
+                settings.codeCompletion,
+                settings.autoIndentation,
+                settings.autoClosePairs,
+                settings.useSpacesInsteadOfTabs,
+                settings.tabWidth,
+            ).joinToString("|")
+            val languageChanged = updateCache.languageKey != languageKey
+            val contentChanged = updateCache.content !== content
+
+            if (contentChanged) {
+                // Set actual text first; attaching TextMate to an empty document
+                // can trigger an unnecessary first analysis pass.
+                editor.setText(content)
+                updateCache.content = content
+            }
+
+            if (languageChanged) {
+                updateCache.language = editor.createFromRegistry(
+                    language = language,
+                    codeCompletion = settings.codeCompletion,
+                    autoIndentation = settings.autoIndentation,
+                    autoClosePairs = settings.autoClosePairs,
+                    useTab = !settings.useSpacesInsteadOfTabs,
+                    tabSize = settings.tabWidth,
+                )
+                updateCache.languageKey = languageKey
+            }
+
+            // Attach the analyzer exactly once per language/document change.
+            // Re-attaching TextMate can restart parsing and delay visible colors.
+            if (languageChanged || contentChanged) {
+                updateCache.language?.let(editor::setEditorLanguage)
+            }
+
         },
         onRelease = CodeEditor::release,
         modifier = modifier,

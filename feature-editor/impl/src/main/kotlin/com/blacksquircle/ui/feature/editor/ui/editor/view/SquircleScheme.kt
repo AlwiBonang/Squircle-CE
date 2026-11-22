@@ -70,7 +70,9 @@ internal class SquircleScheme private constructor(
 
         val background = rawTheme["editor.background"] as? String
         if (background != null) {
-            setColor(WHOLE_BACKGROUND, Color.parseColor(background))
+            val editorBackground = Color.parseColor(background)
+            setColor(WHOLE_BACKGROUND, editorBackground)
+            setColor(LINE_NUMBER_BACKGROUND, editorBackground)
         }
         val foreground = rawTheme["editor.foreground"] as? String
         if (foreground != null) {
@@ -108,11 +110,14 @@ internal class SquircleScheme private constructor(
         if (matchHighlightBackground != null) {
             setColor(MATCHED_TEXT_BACKGROUND, Color.parseColor(matchHighlightBackground))
         }
+        val editorBgForDivider = background?.let { Color.parseColor(it) } ?: Color.BLACK
+        val editorFgForDivider = foreground?.let { Color.parseColor(it) } ?: Color.WHITE
         val lineNumberDivider = rawTheme["editor.lineNumber.divider"] as? String
-        if (lineNumberDivider != null) {
-            setColor(LINE_DIVIDER, Color.parseColor(lineNumberDivider))
-            setColor(STICKY_SCROLL_DIVIDER, Color.parseColor(lineNumberDivider))
-        }
+        val dividerColor = lineNumberDivider?.let {
+            blendColor(editorBgForDivider, Color.parseColor(it), 0.12f)
+        } ?: blendColor(editorBgForDivider, editorFgForDivider, 0.06f)
+        setColor(LINE_DIVIDER, dividerColor)
+        setColor(STICKY_SCROLL_DIVIDER, dividerColor)
         val lineNumberBackground = rawTheme["editor.lineNumber.background"] as? String
         if (lineNumberBackground != null) {
             setColor(LINE_NUMBER_BACKGROUND, Color.parseColor(lineNumberBackground))
@@ -125,14 +130,20 @@ internal class SquircleScheme private constructor(
         if (lineNumberActiveForeground != null) {
             setColor(LINE_NUMBER_CURRENT, Color.parseColor(lineNumberActiveForeground))
         }
+        val guideBackground = background?.let { Color.parseColor(it) } ?: Color.BLACK
+        val guideForeground = foreground?.let { Color.parseColor(it) } ?: Color.WHITE
         val indentGuideBackground = rawTheme["editor.indentGuide.background"] as? String
-        if (indentGuideBackground != null) {
-            setColor(BLOCK_LINE, Color.parseColor(indentGuideBackground))
-        }
         val indentGuideActiveBackground = rawTheme["editor.indentGuide.activeBackground"] as? String
-        if (indentGuideActiveBackground != null) {
-            setColor(BLOCK_LINE_CURRENT, Color.parseColor(indentGuideActiveBackground))
-        }
+        setColor(
+            BLOCK_LINE,
+            indentGuideBackground?.let { Color.parseColor(it) }
+                ?: blendColor(guideBackground, guideForeground, 0.10f)
+        )
+        setColor(
+            BLOCK_LINE_CURRENT,
+            indentGuideActiveBackground?.let { Color.parseColor(it) }
+                ?: blendColor(guideBackground, guideForeground, 0.27f)
+        )
         val popupWindowCorner = rawTheme["editor.popupWindow.corner"] as? String
         if (popupWindowCorner != null) {
             setColor(COMPLETION_WND_CORNER, Color.parseColor(popupWindowCorner))
@@ -148,6 +159,18 @@ internal class SquircleScheme private constructor(
         if (popupWindowActiveBackground != null) {
             setColor(COMPLETION_WND_ITEM_CURRENT, Color.parseColor(popupWindowActiveBackground))
         }
+    }
+
+    private fun blendColor(background: Int, foreground: Int, ratio: Float): Int {
+        val alpha = Color.alpha(background) +
+            (Color.alpha(foreground) - Color.alpha(background)) * ratio
+        val red = Color.red(background) +
+            (Color.red(foreground) - Color.red(background)) * ratio
+        val green = Color.green(background) +
+            (Color.green(foreground) - Color.green(background)) * ratio
+        val blue = Color.blue(background) +
+            (Color.blue(foreground) - Color.blue(background)) * ratio
+        return Color.argb(alpha.toInt(), red.toInt(), green.toInt(), blue.toInt())
     }
 
     override fun isDark(): Boolean {

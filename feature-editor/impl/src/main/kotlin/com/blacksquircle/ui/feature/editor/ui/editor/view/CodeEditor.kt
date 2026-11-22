@@ -17,6 +17,7 @@
 package com.blacksquircle.ui.feature.editor.ui.editor.view
 
 import android.content.Context
+import android.view.KeyEvent
 import android.util.AttributeSet
 import com.blacksquircle.ui.feature.editor.R
 import io.github.rosemoe.sora.text.Content
@@ -71,6 +72,64 @@ internal class CodeEditor @JvmOverloads constructor(
             setLayout(SquircleCompletion())
             setAdapter(SquircleCompletion.Adapter())
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+            val currentCursor = cursor
+            if (!currentCursor.isSelected) {
+                val position = text.indexer.getCharPosition(currentCursor.left)
+
+                // At the absolute beginning of a line, Enter must not inherit
+                // auto-indent from the previous line. Insert a plain newline.
+                if (position.column == 0) {
+                    text.insert(position.line, 0, "\n")
+                    setSelection(position.line + 1, 0)
+                    return true
+                }
+            }
+        }
+
+        if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DEL) {
+            val currentCursor = cursor
+            if (!currentCursor.isSelected) {
+                val position = text.indexer.getCharPosition(currentCursor.left)
+                val lineIndex = position.line
+                val column = position.column
+
+                // Delete one whitespace at a time while inside indentation.
+                if (column > 0) {
+                    val lineText = text.getLine(lineIndex)
+                    val previousChar = lineText[column - 1]
+                    if (previousChar == ' ' || previousChar == '\t') {
+                        text.delete(lineIndex, column - 1, lineIndex, column)
+                        return true
+                    }
+                } else if (lineIndex > 0) {
+                    // Merge this line with the previous one. If the previous
+                    // line contains code, place the cursor at its end; if it is
+                    // blank/indent-only, follow its indentation column.
+                    val previousLine = text.getLine(lineIndex - 1).toString()
+                    val previousIndent = previousLine.takeWhile {
+                        it == ' ' || it == '\t'
+                    }.length
+                    val previousHasCode = previousLine.any {
+                        it != ' ' && it != '\t'
+                    }
+                    val targetColumn = if (previousHasCode) {
+                        previousLine.length
+                    } else {
+                        previousIndent
+                    }
+
+                    text.delete(lineIndex - 1, previousLine.length, lineIndex, 0)
+                    setSelection(lineIndex - 1, targetColumn)
+                    return true
+                }
+            }
+        }
+
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun applyAttributeSets(attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) {

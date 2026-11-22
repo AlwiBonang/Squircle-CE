@@ -25,7 +25,6 @@ import com.blacksquircle.ui.feature.settings.api.navigation.EditorHeaderRoute
 import com.blacksquircle.ui.feature.settings.api.navigation.FilesHeaderRoute
 import com.blacksquircle.ui.feature.settings.api.navigation.GitHeaderRoute
 import com.blacksquircle.ui.feature.settings.api.navigation.HeaderListRoute
-import com.blacksquircle.ui.feature.settings.api.navigation.TerminalHeaderRoute
 import com.blacksquircle.ui.feature.settings.ui.about.AboutHeaderScreen
 import com.blacksquircle.ui.feature.settings.ui.application.AppHeaderScreen
 import com.blacksquircle.ui.feature.settings.ui.codestyle.CodeHeaderScreen
@@ -33,7 +32,6 @@ import com.blacksquircle.ui.feature.settings.ui.editor.EditorHeaderScreen
 import com.blacksquircle.ui.feature.settings.ui.files.FilesHeaderScreen
 import com.blacksquircle.ui.feature.settings.ui.git.GitHeaderScreen
 import com.blacksquircle.ui.feature.settings.ui.header.HeaderListScreen
-import com.blacksquircle.ui.feature.settings.ui.terminal.TerminalHeaderScreen
 import com.blacksquircle.ui.navigation.api.provider.EntryProvider
 
 internal class SettingsEntryProvider : EntryProvider {
@@ -53,9 +51,6 @@ internal class SettingsEntryProvider : EntryProvider {
         }
         entry<FilesHeaderRoute> {
             FilesHeaderScreen()
-        }
-        entry<TerminalHeaderRoute> {
-            TerminalHeaderScreen()
         }
         entry<GitHeaderRoute> {
             GitHeaderScreen()

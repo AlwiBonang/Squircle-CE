@@ -37,6 +37,9 @@ internal class LanguageInteractorImpl(
 ) : LanguageInteractor {
 
     private var grammars = emptyList<GrammarModel>()
+    private var grammarsByScope = emptyMap<String, GrammarModel>()
+    private var grammarsByName = emptyMap<String, GrammarModel>()
+    private val registeredGrammars = mutableSetOf<String>()
 
     init {
         FileProviderRegistry.getInstance().addFileProvider(
@@ -50,29 +53,35 @@ internal class LanguageInteractorImpl(
             if (grammars.isNotEmpty()) {
                 return@withContext grammars
             }
-            val languagesFile = context.assets.open(ASSET_FILE)
-            grammars = jsonParser.decodeFromStream<List<GrammarData>>(languagesFile)
-                .map(GrammarMapper::toModel)
+            context.assets.open(ASSET_FILE).use { languagesFile ->
+                grammars = jsonParser.decodeFromStream<List<GrammarData>>(languagesFile)
+                    .map(GrammarMapper::toModel)
+            }
+            grammarsByScope = grammars.associateBy(GrammarModel::scopeName)
+            grammarsByName = grammars.associateBy(GrammarModel::name)
+
+            // Metadata is cached; expensive TextMate grammar files are loaded only
+            // when a document actually needs that language.
             grammars
         }
     }
 
     override suspend fun registerGrammar(language: String) {
         withContext(dispatcherProvider.io()) {
-            val grammar = grammars.find { it.scopeName == language }
-            if (grammar == null) {
-                return@withContext
-            }
-            if (GrammarRegistry.getInstance().findGrammar(language) != null) {
+            val grammar = grammarsByScope[language] ?: return@withContext
+            if (language in registeredGrammars ||
+                GrammarRegistry.getInstance().findGrammar(language) != null
+            ) {
+                registeredGrammars.add(language)
                 return@withContext
             }
 
-            val grammarDefinition = GrammarMapper.toDefinition(grammar)
-            GrammarRegistry.getInstance().loadGrammar(grammarDefinition)
+            GrammarRegistry.getInstance().loadGrammar(GrammarMapper.toDefinition(grammar))
+            registeredGrammars.add(language)
 
-            grammar.embeddedLanguages.forEach { (_, name) ->
-                val embeddedGrammar = grammars.find { it.name == name }
-                if (embeddedGrammar != null) {
+            for ((_, embeddedName) in grammar.embeddedLanguages) {
+                val embeddedGrammar = grammarsByName[embeddedName] ?: continue
+                if (embeddedGrammar.scopeName !in registeredGrammars) {
                     registerGrammar(embeddedGrammar.scopeName)
                 }
             }

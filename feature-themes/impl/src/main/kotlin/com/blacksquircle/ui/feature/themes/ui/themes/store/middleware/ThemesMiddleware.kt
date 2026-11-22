@@ -47,6 +47,7 @@ internal class ThemesMiddleware @Inject constructor(
             onBackClicked(actions),
             onSelectClicked(actions),
             onRemoveClicked(actions),
+            onImportClicked(actions),
         )
     }
 
@@ -77,6 +78,19 @@ internal class ThemesMiddleware @Inject constructor(
                 themeRepository.selectTheme(action.theme)
 
                 ThemesAction.CommandAction.ThemeSelected(action.theme)
+            }.catch<ThemesAction> {
+                emit(ThemesAction.Error(it))
+            }
+    }
+
+    private fun onImportClicked(actions: Flow<ThemesAction>): Flow<ThemesAction> {
+        return actions.filterIsInstance<ThemesAction.UiAction.OnImportClicked>()
+            .map { action ->
+                val theme = themeRepository.importTheme(action.json, action.fileName)
+                ThemesAction.CommandAction.ThemeImported(
+                    theme = theme,
+                    themes = themeRepository.loadThemes(action.query),
+                )
             }.catch<ThemesAction> {
                 emit(ThemesAction.Error(it))
             }

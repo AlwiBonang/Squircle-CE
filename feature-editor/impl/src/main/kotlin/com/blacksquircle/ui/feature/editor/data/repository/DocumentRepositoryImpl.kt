@@ -140,8 +140,8 @@ internal class DocumentRepositoryImpl(
             documentDao.updateProperties(
                 uuid = document.uuid,
                 modified = document.modified,
-                scrollX = content.scrollX,
-                scrollY = content.scrollY,
+                scrollX = document.scrollX,
+                scrollY = document.scrollY,
                 selectionStart = content.selectionStart,
                 selectionEnd = content.selectionEnd
             )

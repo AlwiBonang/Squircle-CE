@@ -30,6 +30,7 @@ internal sealed interface ThemesAction : MVIAction {
         data object OnBackClicked : UiAction
         data class OnSelectClicked(val theme: ThemeModel) : UiAction
         data class OnRemoveClicked(val theme: ThemeModel) : UiAction
+        data class OnImportClicked(val json: String, val fileName: String, val query: String) : UiAction
 
         sealed interface QueryAction : UiAction
         data class OnQueryChanged(val query: String) : QueryAction
@@ -46,5 +47,6 @@ internal sealed interface ThemesAction : MVIAction {
 
         data class ThemeSelected(val theme: ThemeModel) : CommandAction
         data class ThemeRemoved(val theme: ThemeModel, val selectedUuid: String) : CommandAction
+        data class ThemeImported(val theme: ThemeModel, val themes: List<ThemeModel>) : CommandAction
     }
 }

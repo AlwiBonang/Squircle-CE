@@ -149,8 +149,8 @@ internal class EditorViewModel @Inject constructor(
 
                 val updatedDocument = document.copy(
                     modified = false,
-                    scrollX = content.scrollX,
-                    scrollY = content.scrollY,
+                    scrollX = document.scrollX,
+                    scrollY = document.scrollY,
                     selectionStart = content.selectionStart,
                     selectionEnd = content.selectionEnd,
                 )
@@ -1103,8 +1103,8 @@ internal class EditorViewModel @Inject constructor(
                 val autoSaveFiles = settingsManager.autoSaveFiles
                 val updatedDocument = document.copy(
                     modified = if (autoSaveFiles) false else document.modified,
-                    scrollX = content.scrollX,
-                    scrollY = content.scrollY,
+                    scrollX = document.scrollX,
+                    scrollY = document.scrollY,
                     selectionStart = content.selectionStart,
                     selectionEnd = content.selectionEnd,
                 )
@@ -1214,52 +1214,55 @@ internal class EditorViewModel @Inject constructor(
         currentJob?.cancel()
         currentJob = viewModelScope.launch {
             try {
-                /** Check if [document] is already added to tabs */
                 val existingIndex = documents.indexOf { it.document.fileUri == document.fileUri }
-                if (existingIndex == selectedPosition && selectedPosition != -1 && fromUser) {
-                    return@launch
-                }
 
-                documents = documents.mapSelected { state ->
-                    /** If it's user-initiated action, save cache and clear tab's content */
-                    if (fromUser) {
-                        val autoSaveFiles = settingsManager.autoSaveFiles
-                        val updatedDocument = state.document.copy(
-                            modified = if (autoSaveFiles) false else state.document.modified,
-                            scrollX = state.content?.scrollX
-                                ?: state.document.scrollX,
-                            scrollY = state.content?.scrollY
-                                ?: state.document.scrollY,
-                            selectionStart = state.content?.selectionStart
-                                ?: state.document.selectionStart,
-                            selectionEnd = state.content?.selectionEnd
-                                ?: state.document.selectionEnd,
-                        )
-                        if (state.content != null) {
-                            if (autoSaveFiles) {
-                                documentRepository.saveDocument(updatedDocument, state.content)
-                            } else {
-                                documentRepository.cacheDocument(updatedDocument, state.content)
-                            }
+                // Switching away from the current document: persist/cache its latest
+                // editor state, but keep Content in memory for instant tab switching.
+                if (fromUser && selectedPosition in documents.indices) {
+                    val currentState = documents[selectedPosition]
+                    val currentContent = currentState.content
+                    val autoSaveFiles = settingsManager.autoSaveFiles
+                    val updatedDocument = currentState.document.copy(
+                        modified = if (autoSaveFiles) false else currentState.document.modified,
+                        selectionStart = currentContent?.selectionStart
+                            ?: currentState.document.selectionStart,
+                        selectionEnd = currentContent?.selectionEnd
+                            ?: currentState.document.selectionEnd,
+                    )
+                    if (currentContent != null) {
+                        if (autoSaveFiles) {
+                            documentRepository.saveDocument(updatedDocument, currentContent)
+                        } else {
+                            documentRepository.cacheDocument(updatedDocument, currentContent)
                         }
-                        state.copy(
-                            document = updatedDocument,
-                            content = null,
-                            canUndo = false,
-                            canRedo = false,
-                        )
-                    } else {
-                        state
+                    }
+                    documents = documents.toMutableList().also { list ->
+                        list[selectedPosition] = currentState.copy(document = updatedDocument)
                     }
                 }
 
-                if (existingIndex != -1) {
-                    /** Select existing document */
-                    selectedPosition = existingIndex
+                val targetIndex = if (existingIndex >= 0) {
+                    existingIndex
                 } else {
-                    /** Create new document */
                     documents = documents + DocumentState(document)
-                    selectedPosition = documents.size - 1
+                    documents.lastIndex
+                }
+                selectedPosition = targetIndex
+
+                val cachedState = documents.getOrNull(targetIndex)
+                val cachedContent = cachedState?.content
+
+                // Cached documents are attached immediately. No filesystem read,
+                // grammar registration, or loading spinner on a normal tab switch.
+                if (cachedContent != null) {
+                    _viewState.update {
+                        it.copy(
+                            documents = documents,
+                            selectedDocument = selectedPosition,
+                            isLoading = false,
+                        )
+                    }
+                    return@launch
                 }
 
                 _viewState.update {
@@ -1274,12 +1277,13 @@ internal class EditorViewModel @Inject constructor(
                     _viewEvent.send(EditorViewEvent.ScrollToEnd)
                 }
 
-                val content = documentRepository.loadDocument(document)
                 languageInteractor.registerGrammar(document.language)
+                val content = documentRepository.loadDocument(document)
                 ensureActive()
 
-                documents = documents.mapSelected {
-                    it.copy(
+                documents = documents.toMutableList().also { list ->
+                    val state = list[targetIndex]
+                    list[targetIndex] = state.copy(
                         content = content,
                         canUndo = content.canUndo(),
                         canRedo = content.canRedo(),
@@ -1298,8 +1302,6 @@ internal class EditorViewModel @Inject constructor(
                 throw e
             } catch (e: Throwable) {
                 Timber.e(e, e.message)
-
-                /** Clear content and show error */
                 documents = documents.mapSelected {
                     it.copy(
                         content = null,
@@ -1308,7 +1310,6 @@ internal class EditorViewModel @Inject constructor(
                         errorState = errorState(e),
                     )
                 }
-
                 _viewState.update {
                     it.copy(
                         documents = documents,
@@ -1346,6 +1347,8 @@ internal class EditorViewModel @Inject constructor(
 
                 if (selectedPosition in documents.indices) {
                     val document = documents[selectedPosition].document
+                    // Warm the selected grammar before the editor view is shown.
+                    languageInteractor.registerGrammar(document.language)
                     loadDocument(document, fromUser = false)
                 }
 

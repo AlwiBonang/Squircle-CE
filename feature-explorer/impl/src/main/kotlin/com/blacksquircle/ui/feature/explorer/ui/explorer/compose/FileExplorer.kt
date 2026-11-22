@@ -16,24 +16,17 @@
 
 package com.blacksquircle.ui.feature.explorer.ui.explorer.compose
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.util.fastAny
 import com.blacksquircle.ui.feature.explorer.ui.explorer.model.FileNode
 
 @Composable
@@ -45,23 +38,20 @@ internal fun FileExplorer(
     onFileClicked: (FileNode) -> Unit = {},
     onFileSelected: (FileNode) -> Unit = {},
 ) {
-    val density = LocalDensity.current
     val hapticFeedback = LocalHapticFeedback.current
-    var cacheItemWidth by remember {
-        mutableStateOf(MinItemWidth)
-    }
+    // Cache selection keys to avoid repeated linear scans during row recomposition.
+    val selectedKeys = remember(selectedNodes) { selectedNodes.mapTo(HashSet()) { it.key } }
 
     LazyColumn(
         contentPadding = contentPadding,
-        modifier = modifier
-            .fillMaxSize()
-            .horizontalScroll(rememberScrollState())
+        modifier = modifier.fillMaxSize()
     ) {
         items(
             items = fileNodes,
             key = { it.file.fileUri },
+            contentType = { "file-row" },
         ) { fileNode ->
-            val isSelected = selectedNodes.fastAny { it.key == fileNode.key }
+            val isSelected = fileNode.key in selectedKeys
             FileItem(
                 fileNode = fileNode,
                 isSelected = isSelected,
@@ -70,15 +60,7 @@ internal fun FileExplorer(
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                     onFileSelected(fileNode)
                 },
-                modifier = Modifier
-                    .onSizeChanged { size ->
-                        val itemWidthDp = with(density) { size.width.toDp() }
-                        if (cacheItemWidth < itemWidthDp) {
-                            cacheItemWidth = itemWidthDp
-                        }
-                    }
-                    .widthIn(min = cacheItemWidth)
-                    .animateItem()
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

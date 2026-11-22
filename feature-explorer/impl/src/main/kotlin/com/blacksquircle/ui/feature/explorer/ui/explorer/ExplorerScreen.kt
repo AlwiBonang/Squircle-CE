@@ -18,9 +18,6 @@ package com.blacksquircle.ui.feature.explorer.ui.explorer
 
 import android.Manifest
 import android.os.Build
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -249,11 +246,7 @@ private fun ExplorerScreen(
                 )
             },
             bottomBar = {
-                AnimatedVisibility(
-                    visible = viewState.showActionBar,
-                    enter = slideInVertically(initialOffsetY = { it }),
-                    exit = slideOutVertically(targetOffsetY = { it }),
-                ) {
+                if (viewState.showActionBar) {
                     ExplorerActionBar(
                         taskType = viewState.taskType,
                         onRefreshClicked = onRefreshClicked,

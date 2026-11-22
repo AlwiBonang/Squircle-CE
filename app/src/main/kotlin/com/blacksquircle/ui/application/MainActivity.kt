@@ -20,7 +20,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.blacksquircle.ui.internal.AppComponent
 import com.blacksquircle.ui.navigation.api.Navigator
@@ -37,7 +36,6 @@ internal class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         AppComponent.buildOrGet(this).inject(this)
         setContent {

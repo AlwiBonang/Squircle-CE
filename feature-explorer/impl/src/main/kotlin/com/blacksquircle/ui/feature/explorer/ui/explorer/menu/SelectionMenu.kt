@@ -59,10 +59,6 @@ internal fun SelectionMenu(
                     onClick = onOpenWithClicked,
                 )
                 if (selection.first().isDirectory) {
-                    PopupMenuItem(
-                        title = stringResource(R.string.explorer_menu_selection_open_terminal),
-                        onClick = onOpenTerminalClicked,
-                    )
                 }
             }
             PopupMenuItem(

@@ -59,9 +59,7 @@ internal class CacheManager(private val cacheDir: File) {
         content.cursor.setLeft(selectionStart.line, selectionStart.column)
         content.cursor.setRight(selectionEnd.line, selectionEnd.column)
 
-        content.scrollX = document.scrollX
-        content.scrollY = document.scrollY
-
+                
         val undoCacheFile = cacheFile(document, postfix = HISTORY)
         if (!undoCacheFile.exists()) {
             undoCacheFile.createNewFile()

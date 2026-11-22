@@ -18,6 +18,8 @@ package com.blacksquircle.ui.feature.themes.ui.themes
 
 import android.graphics.Typeface
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -80,6 +82,23 @@ internal fun ThemesScreen(
     },
 ) {
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: error("Unable to read theme file")
+            }.onSuccess { json ->
+                val name = uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.')
+                    ?.takeIf { it.isNotBlank() } ?: "Imported theme"
+                viewModel.dispatch(ThemesAction.UiAction.OnImportClicked(json, name, viewState.searchQuery))
+            }.onFailure {
+                context.showToast(text = it.message ?: "Failed to import theme")
+            }
+        }
+    }
     ThemesScreen(
         viewState = viewState,
         onBackClicked = { viewModel.dispatch(ThemesAction.UiAction.OnBackClicked) },
@@ -87,9 +106,9 @@ internal fun ThemesScreen(
         onClearQueryClicked = { viewModel.dispatch(ThemesAction.UiAction.OnClearQueryClicked) },
         onSelectClicked = { viewModel.dispatch(ThemesAction.UiAction.OnSelectClicked(it)) },
         onRemoveClicked = { viewModel.dispatch(ThemesAction.UiAction.OnRemoveClicked(it)) },
+        onImportClicked = { importLauncher.launch(arrayOf("application/json", "text/*")) },
     )
 
-    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -113,6 +132,7 @@ private fun ThemesScreen(
     onClearQueryClicked: () -> Unit = {},
     onSelectClicked: (ThemeModel) -> Unit = {},
     onRemoveClicked: (ThemeModel) -> Unit = {},
+    onImportClicked: () -> Unit = {},
 ) {
     ScaffoldSuite(
         topBar = {
@@ -166,6 +186,11 @@ private fun ThemesScreen(
                             searchMode = false
                         }
                     } else {
+                        IconButton(
+                            iconResId = UiR.drawable.ic_tray_arrow_down,
+                            iconButtonSize = IconButtonSizeDefaults.L,
+                            onClick = onImportClicked,
+                        )
                         IconButton(
                             iconResId = UiR.drawable.ic_search,
                             iconButtonSize = IconButtonSizeDefaults.L,

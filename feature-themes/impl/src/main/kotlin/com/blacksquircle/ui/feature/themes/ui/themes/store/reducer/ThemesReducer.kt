@@ -75,6 +75,18 @@ internal class ThemesReducer @Inject constructor(
                 }
             }
 
+            is ThemesAction.CommandAction.ThemeImported -> {
+                state {
+                    copy(
+                        themes = action.themes,
+                        isLoading = false,
+                    )
+                }
+                event(
+                    ThemesEvent.Toast("Imported «${action.theme.name}»")
+                )
+            }
+
             is ThemesAction.CommandAction.ThemeSelected -> {
                 event(
                     ThemesEvent.Toast(

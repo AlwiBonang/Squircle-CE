@@ -40,7 +40,6 @@ import com.blacksquircle.ui.feature.settings.api.navigation.CodeStyleHeaderRoute
 import com.blacksquircle.ui.feature.settings.api.navigation.EditorHeaderRoute
 import com.blacksquircle.ui.feature.settings.api.navigation.FilesHeaderRoute
 import com.blacksquircle.ui.feature.settings.api.navigation.GitHeaderRoute
-import com.blacksquircle.ui.feature.settings.api.navigation.TerminalHeaderRoute
 import com.blacksquircle.ui.feature.settings.internal.SettingsComponent
 import com.blacksquircle.ui.feature.shortcuts.api.navigation.ShortcutsRoute
 import com.blacksquircle.ui.ds.R as UiR
@@ -100,11 +99,6 @@ private fun HeaderListScreen(
                 title = stringResource(R.string.settings_header_files_title),
                 subtitle = stringResource(R.string.settings_header_files_subtitle),
                 onClick = { onHeaderClicked(FilesHeaderRoute) },
-            )
-            PreferenceHeader(
-                title = stringResource(R.string.settings_header_terminal_title),
-                subtitle = stringResource(R.string.settings_header_terminal_subtitle),
-                onClick = { onHeaderClicked(TerminalHeaderRoute) },
             )
             PreferenceHeader(
                 title = stringResource(R.string.settings_header_keybindings_title),
